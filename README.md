@@ -103,8 +103,7 @@ via webhooks etc. Here are the rules:
 2. all executable files in the folder will be called, in alphanumerical order
 3. STDOUT is ignored
 4. return codes are ignored
-5. the following envvars are made available to all scripts:
-  - HOSTNAME
+5. the `HOSTNAME` envvar is made available to all scripts:
 
 Example webhook:
 
