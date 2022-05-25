@@ -115,3 +115,5 @@ Example webhook:
 - [ ] figure out how to handle multiple sections with the same name (checkmk does this by default sometimes)
 - [ ] add logging to the server
 - [ ] general refactor to make the code easier to understand
+- [ ] don't touch output that is already in JSON
+- [ ] add hinting to section names for generic parsers
