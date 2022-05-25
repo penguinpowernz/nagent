@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+require 'json'
+
+data = ARGF.read
+
+out = {}
+data.split("\n").each do |line|
+    bits = line.split(":")
+    key = bits[0]
+    value = bits[1..-1].join(":")
+    value.strip!
+    value = value.downcase.sub(" kb", '').to_i
+    
+    key.strip!
+    key.downcase!
+    key.gsub!(/[^0-9a-z]/, '_')
+    key.gsub!(/_+/, '_')
+
+    out[key] = value
+end
+
+puts out.to_json

@@ -1,0 +1,196 @@
+#!/bin/bash
+
+case $SECTION in
+    # "airport")
+    #     jc --airport <&0
+    # ;;
+    # "airport-s")
+    #     jc --airport-s <&0
+    # ;;
+    "arp")
+        jc --arp <&0
+    ;;
+    "blkid")
+        jc --blkid <&0
+    ;;
+    # "cksum")
+    #     jc --cksum <&0
+    # ;;
+    # "crontab")
+    #     jc --crontab <&0
+    # ;;
+    # "crontab-u")
+    #     jc --crontab-u <&0
+    # ;;
+    # "csv")
+    #     jc --csv <&0
+    # ;;
+    "date")
+        jc --date <&0
+    ;;
+    "df")
+        jc --df <&0
+    ;;
+    # "dig")
+    #     jc --dig <&0
+    # ;;
+    "dmidecode")
+        jc --dmidecode <&0
+    ;;
+    # "du")
+    #     jc --du <&0
+    # ;;
+    # "env")
+    #     jc --env <&0
+    # ;;
+    # "file")
+    #     jc --file <&0
+    # ;;
+    # "free")
+    #     jc --free <&0
+    # ;;
+    "fstab")
+        jc --fstab <&0
+    ;;
+    # "group")
+    #     jc --group <&0
+    # ;;
+    # "gshadow")
+    #     jc --gshadow <&0
+    # ;;
+    # "hash")
+    #     jc --hash <&0
+    # ;;
+    # "hashsum")
+    #     jc --hashsum <&0
+    # ;;
+    "hciconfig")
+        jc --hciconfig <&0
+    ;;
+    # "history")
+    #     jc --history <&0
+    # ;;
+    "hosts")
+        jc --hosts <&0
+    ;;
+    # "id")
+    #     jc --id <&0
+    # ;;
+    "ifconfig")
+        jc --ifconfig <&0
+    ;;
+    # "ini")
+    #     jc --ini <&0
+    # ;;
+    "iptables")
+        jc --iptables <&0
+    ;;
+    "iw-scan")
+        jc --iw-scan <&0
+    ;;
+    # "jobs")
+    #     jc --jobs <&0
+    # ;;
+    # "kv")
+    #     jc --kv <&0
+    # ;;
+    # "last")
+    #     jc --last <&0
+    # ;;
+    # "ls")
+    #     jc --ls <&0
+    # ;;
+    "lsblk")
+        jc --lsblk <&0
+    ;;
+    "lsmod")
+        jc --lsmod <&0
+    ;;
+    # "lsof")
+    #     jc --lsof <&0
+    # ;;
+    "mount")
+        jc --mount <&0
+    ;;
+    "netstat")
+        jc --netstat <&0
+    ;;
+    # "ntpq")
+    #     jc --ntpq <&0
+    # ;;
+    "passwd")
+        jc --passwd <&0
+    ;;
+    # "ping")
+    #     jc --ping <&0
+    # ;;
+    # "pip-list")
+    #     jc --pip-list <&0
+    # ;;
+    # "pip-show")
+    #     jc --pip-show <&0
+    # ;;
+    "psauwx")
+        jc --ps <&0
+    ;;
+    "route")
+        jc --route <&0
+    ;;
+    # "shadow")
+    #     jc --shadow <&0
+    # ;;
+    "ss")
+        jc --ss <&0
+    ;;
+    # "stat")
+    #     jc --stat <&0
+    # ;;
+    "sysctl")
+        jc --sysctl <&0
+    ;;
+    "systemctl")
+        jc --systemctl <&0
+    ;;
+    # "systemctl-lj")
+    #     jc --systemctl-lj <&0
+    # ;;
+    # "systemctl-ls")
+    #     jc --systemctl-ls <&0
+    # ;;
+    # "systemctl-luf")
+    #     jc --systemctl-luf <&0
+    # ;;
+    "timedatectl")
+        jc --timedatectl <&0
+    ;;
+    # "tracepath")
+    #     jc --tracepath <&0
+    # ;;
+    # "traceroute")
+    #     jc --traceroute <&0
+    # ;;
+    "uname")
+        jc --uname <&0
+    ;;
+    "uptime")
+        jc --uptime <&0
+    ;;
+    # "w")
+    #     jc --w <&0
+    # ;;
+    # "wc")
+    #     jc --wc <&0
+    # ;;
+    # "who")
+    #     jc --who <&0
+    # ;;
+    "xml")
+        jc --xml <&0
+    ;;
+    "yaml")
+        jc --yaml <&0
+    ;;
+    *)
+        exit 1
+    ;;
+esac;

@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'json'
+
+data = ARGF.read
+
+out = []
+
+data.split("\n").each do |line|
+    bits = line.split(" ")
+    next unless bits[0] == "Bus"
+    d = {}
+    d[:bus] = bits[1]
+    d[:device] = bits[3]
+    d[:id] = bits[5]
+    d[:name] = bits[6..-1].join(" ")
+    out << d
+end
+
+puts out.to_json
