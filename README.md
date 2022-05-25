@@ -1,7 +1,7 @@
 # nagent
 
-An agent that delivers system status in checkmk format via NATS.  It's receiving server converts
-the can modify the incoming data en route, and convert it to JSON using local Debian style scripts.
+An agent that delivers system status in checkmk format via NATS.  It's receiving server 
+can modify the incoming data en route, and convert it to JSON using local Debian style scripts.
 It also stores/updates a shadow file for each host.
 
 ## Running the agent
