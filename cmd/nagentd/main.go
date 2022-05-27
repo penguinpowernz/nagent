@@ -31,8 +31,9 @@ func main() {
 	}
 
 	var sectionScriptHooks = hooks.BuildParsersFrom("./parsers")
-	var ruleScriptHooks = hooks.BuildPreModifiersFrom("./pre")
+	var preScriptHooks = hooks.BuildPreModifiersFrom("./pre")
 	var sinkScriptHooks = hooks.BuildSinksFrom("./sinks")
+	var postScriptHooks = hooks.BuildPostModifiersFrom("./post")
 
 	store := &DiskStore{path: "./shadows"}
 
@@ -44,7 +45,7 @@ func main() {
 		// parse basic map string, with each section as an array of lines
 		unparsed := checkmk.Parse(msg.Data)
 		// pass whole shadow through the pre-process rules
-		if err := hooks.ProcessPre(ruleScriptHooks, unparsed); err == hooks.ErrDiscardShadow {
+		if err := hooks.ProcessPre(preScriptHooks, unparsed); err == hooks.ErrDiscardShadow {
 			return // discard the shadow if necessary
 		}
 
@@ -76,6 +77,13 @@ func main() {
 		if err != nil {
 			log.Println("ERROR: failed to save shadow")
 			return
+		}
+
+		_data, err := hooks.ProcessPost(postScriptHooks, data)
+		if err != nil {
+			log.Println("ERROR: failed to modify shadow in post hooks:", err)
+		} else {
+			data = _data
 		}
 
 		// if saving went OK pass it to all of our sinks
