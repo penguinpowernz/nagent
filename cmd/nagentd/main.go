@@ -74,6 +74,10 @@ func main() {
 	})
 
 	api := gin.Default()
+	api.GET("/hosts", func(c *gin.Context) {
+		c.JSON(200, store.Hosts())
+	})
+
 	api.GET("/shadow/:name", func(c *gin.Context) {
 		name := c.Param("name")
 		data, err := store.Read(name)
