@@ -42,6 +42,8 @@ func main() {
 			nc.Publish(msg.Reply, []byte("true"))
 		}
 
+		hostname := strings.Split(msg.Subject, ".")[1]
+
 		// parse basic map string, with each section as an array of lines
 		unparsed := checkmk.Parse(msg.Data)
 		// pass whole shadow through the pre-process rules
@@ -49,28 +51,7 @@ func main() {
 			return // discard the shadow if necessary
 		}
 
-		hostname := strings.Split(msg.Subject, ".")[1]
-
-		shadow := map[string]interface{}{}
-
-		// run through each section and give it to our filters to parse into JSON
-		for section, lines := range unparsed {
-			shadow[section] = lines // default is just an array of lines
-
-			// this returns data, modified from the original raw lines
-			data, err := hooks.ProcessParsers(sectionScriptHooks, section, []byte(strings.Join(lines, "\n")))
-			if err != nil {
-				continue
-			}
-
-			var v interface{}
-			if err := json.Unmarshal(data, &v); err != nil {
-				continue // throw it away if it wasn't valid JSON
-			}
-
-			// replace the section with what was modified
-			shadow[section] = v
-		}
+		shadow := mkShadow(unparsed, parserScriptHooks)
 
 		// save it to the store, which returns the JSON result of merging with the existing shadow
 		data, err := store.Save(hostname, shadow)
@@ -106,4 +87,29 @@ func main() {
 	})
 
 	api.Run(":8080")
+}
+
+func mkShadow(unparsed map[string][]string, parserScriptHooks map[string]hooks.Modifier) map[string]interface{} {
+	shadow := map[string]interface{}{}
+
+	// run through each section and give it to our filters to parse into JSON
+	for section, lines := range unparsed {
+		shadow[section] = lines // default is just an array of lines
+
+		// this returns data, modified from the original raw lines
+		data, err := hooks.ProcessParsers(parserScriptHooks, section, []byte(strings.Join(lines, "\n")))
+		if err != nil {
+			continue
+		}
+
+		var v interface{}
+		if err := json.Unmarshal(data, &v); err != nil {
+			continue // throw it away if it wasn't valid JSON
+		}
+
+		// replace the section with what was modified
+		shadow[section] = v
+	}
+
+	return shadow
 }
