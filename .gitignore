@@ -1,0 +1,3 @@
+dpkg/client/usr/bin/nagent
+dpkg/server/usr/bin/nagentd
+dpkg/server/usr/share/nagentd/*

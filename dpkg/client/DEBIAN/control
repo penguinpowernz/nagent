@@ -1,0 +1,13 @@
+Package: nagent
+Version: 0.0.1
+Section: misc
+Priority: optional
+Architecture: all
+Maintainer: Robert McLeod <robert@penguinpower.co.nz>
+Recommends: check_mk_agent
+Essential: no
+Homepage: https://github.com/penguinpowernz/nagent
+Installed-Size: 
+Description: This is a description
+  This is a longer description
+  that takes up multiple lines

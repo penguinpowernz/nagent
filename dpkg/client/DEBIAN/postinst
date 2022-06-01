@@ -1,0 +1,7 @@
+#!/bin/bash
+
+[[ -f /etc/default/nagent ]] || cat <<EOF > /etc/default/nagent
+NATS_URL=
+EOF
+
+exit 0;

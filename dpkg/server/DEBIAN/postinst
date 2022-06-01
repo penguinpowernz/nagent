@@ -1,0 +1,10 @@
+#!/bin/bash
+
+mkdir -p /var/lib/nagentd;
+
+[[ -d /var/lib/nagentd/parsers ]] || cp -Rvf /usr/share/nagentd/parsers /var/lib/nagentd
+[[ -d /var/lib/nagentd/pre ]]     || cp -Rvf /usr/share/nagentd/pre     /var/lib/nagentd
+[[ -d /var/lib/nagentd/post ]]    || cp -Rvf /usr/share/nagentd/post    /var/lib/nagentd
+[[ -d /var/lib/nagentd/sinks ]]   || cp -Rvf /usr/share/nagentd/sinks   /var/lib/nagentd
+
+exit 0;
