@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -16,10 +18,34 @@ import (
 
 var ErrMergedShadowNotJSON = errors.New("merge shadows failed to produce valid JSON")
 
+var (
+	parserScriptHooks map[string]hooks.Modifier
+	preScriptHooks    []hooks.Modifier
+	sinkScriptHooks   []hooks.Sink
+	postScriptHooks   []hooks.Modifier
+)
+
 func main() {
-	var url string
+	var url, fn, home string
 	flag.StringVar(&url, "u", os.Getenv("NATS_URL"), "the NATS server to connect to")
+	flag.StringVar(&fn, "f", "", "agent report file to convert into JSON")
+	flag.StringVar(&home, "d", "/var/lib/nagentd", "home dir for the program")
 	flag.Parse()
+
+	parserScriptHooks = hooks.BuildParsersFrom(home + "/parsers")
+	preScriptHooks = hooks.BuildPreModifiersFrom(home + "/pre")
+	sinkScriptHooks = hooks.BuildSinksFrom(home + "/sinks")
+	postScriptHooks = hooks.BuildPostModifiersFrom(home + "/post")
+
+	if fn != "" || fn == "-" {
+		parseAndDumpFile(os.Stdin, nil)
+		return
+	}
+
+	if fn != "" {
+		parseAndDumpFile(os.Open(fn))
+		return
+	}
 
 	if url == "" {
 		url = nats.DefaultURL
@@ -29,11 +55,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	var sectionScriptHooks = hooks.BuildParsersFrom("./parsers")
-	var preScriptHooks = hooks.BuildPreModifiersFrom("./pre")
-	var sinkScriptHooks = hooks.BuildSinksFrom("./sinks")
-	var postScriptHooks = hooks.BuildPostModifiersFrom("./post")
 
 	store := &DiskStore{path: "./shadows"}
 
@@ -116,4 +137,30 @@ func mkShadow(unparsed map[string][]string, parserScriptHooks map[string]hooks.M
 	}
 
 	return shadow
+}
+
+func parseAndDumpFile(r io.Reader, err error) {
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+
+	// parse basic map string, with each section as an array of lines
+	unparsed := checkmk.Parse(data)
+	// pass whole shadow through the pre-process rules
+	if err := hooks.ProcessPre(preScriptHooks, unparsed); err == hooks.ErrDiscardShadow {
+		return // discard the shadow if necessary
+	}
+
+	shadow := mkShadow(unparsed, parserScriptHooks)
+	data, err = json.MarshalIndent(shadow, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	os.Stdout.Write(data)
 }
