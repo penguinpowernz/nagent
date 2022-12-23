@@ -1,19 +1,21 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 RUN apt-get update
-RUN apt-get install -y jc jq gron ruby python curl mosquitto-clients
-RUN curl https://github.com/mikefarah/yq/releases/download/v4.25.1/yq_linux_amd64 -o /usr/bin/yq
-RUN chmod +x yq
+RUN apt-get install -y jc jq gron ruby curl mosquitto-clients
+RUN curl -sSL https://github.com/mikefarah/yq/releases/download/v4.25.1/yq_linux_amd64 -o /usr/bin/yq
+RUN chmod +x /usr/bin/yq
 
-RUN gem install influxdb-client-ruby influxdb-ruby nats-pure -N
+RUN curl -sSL https://github.com/penguinpowernz/nagent/releases/download/v1.0.0/nagentd_1.0.0_amd64 -o /usr/bin/nagentd
+RUN chmod +x /usr/bin/nagentd
 
-COPY lib/* /usr/share/nagentd/lib
-COPY bin/nagentd /usr/bin
-COPY scripts/entrypoint.sh /usr/bin
+RUN gem install influxdb-client influxdb-ruby nats-pure -N
+
+COPY lib/* /usr/share/nagentd/lib/
+COPY scripts/entrypoint.sh /entrypoint.sh
 
 WORKDIR /var/lib/nagentd
 VOLUME /var/lib/nagentd
 
 EXPOSE 8080
 
-CMD entrypoint.sh
+CMD /entrypoint.sh
