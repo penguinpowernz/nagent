@@ -4,6 +4,16 @@ An agent that delivers system status in checkmk format via NATS.  It's receiving
 can modify the incoming data en route, and convert it to JSON using local Debian style scripts.
 It also stores/updates a shadow file for each host.
 
+## Server flow
+
+![image](https://user-images.githubusercontent.com/4642414/209256243-2543f67f-931b-40b1-9c32-89171f8ffb7b.png)
+
+Anything from the agent coming in on the NATS channel is delivered first to the preprocess hook scripts.  These are each run according to their rules, and successful output is then passed to the parsing scripts.
+
+After the parsers have done their work, usually to turn the input into valid JSON to output, that output is passed to the merger/storer which merges the output with any existing JSON documents for the same device name.  This allows agent data to be sent up piecemmeal to be merged into the existing shadows.  The shadows are stored to disk as JSON object and can be accessed by the included HTTP API.
+
+Finally the sink scripts allow the entire resultant merged JSON document to be passed on to any place you want.  You may just need to extend the docker image, or do a feature/pull request to add any extra tools you need to accomplish this task.
+
 ## Running the agent
 
 You can throw the output from any command at the stdin and name the 'section' with the `-k` flag.
@@ -117,3 +127,4 @@ Example webhook:
 - [ ] general refactor to make the code easier to understand
 - [ ] don't touch output that is already in JSON
 - [ ] add hinting to section names for generic parsers
+- [ ] add environment variables for passing secrets to scripts
