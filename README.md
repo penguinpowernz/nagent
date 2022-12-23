@@ -14,6 +14,8 @@ After the parsers have done their work, usually to turn the input into valid JSO
 
 Finally the sink scripts allow the entire resultant merged JSON document to be passed on to any place you want.  You may just need to extend the docker image, or do a feature/pull request to add any extra tools you need to accomplish this task.
 
+Note that the scripts could also be go/rust/etc binaries.  As long as they're executable and adhere to the rules it should work fine.
+
 ## Running the agent
 
 You can throw the output from any command at the stdin and name the 'section' with the `-k` flag.
