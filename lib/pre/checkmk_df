@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+
+# This script modifies output from default check_mk scripts to ensure
+# that the double inclusion of <<<df>>> in the output - the second one
+# being for inodes - is renamed to its own section "<<<df_inodes>>>".
+#
+# It also changes the <<<df>>> section to <<<check_mk_df>>> and
+# <<<df_inodes>>> to <<<check_mk_df_inodes>>> as it uses it's own
+# df format and this would be annoying for it to parse `df | nagent -k df`
+
+out = ARGF.read
+exit 21 if !out.include?("<<<check_mk>>>")
+
+out.gsub!(/<<<df>>>\n*\[df_inodes_start\]/, "<<<check_mk_df_inodes>>>")
+out.gsub!(/<<<df>>>/, "<<<check_mk_df>>>")
+out.sub!("[df_inodes_end]\n",'')
+
+puts out
