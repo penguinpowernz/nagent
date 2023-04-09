@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'nats'
+nats = NATS.connect('nats')
+nats.publish('shadows.'+ENV['HOSTNAME']+'.updated', ARGF.read)
