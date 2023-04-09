@@ -109,9 +109,9 @@ case $SECTION in
     # "lsof")
     #     jc --lsof <&0
     # ;;
-    "mount")
-        jc --mount <&0
-    ;;
+    # "mount")
+    #     jc --mount <&0
+    # ;;
     "netstat")
         jc --netstat <&0
     ;;
@@ -172,9 +172,9 @@ case $SECTION in
     "uname")
         jc --uname <&0
     ;;
-    "uptime")
-        jc --uptime <&0
-    ;;
+    # "uptime")
+    #     jc --uptime <&0
+    # ;;
     # "w")
     #     jc --w <&0
     # ;;

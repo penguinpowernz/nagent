@@ -8,7 +8,7 @@ out = {}
 data.split("\n").each do |line|
     bits = line.split(":")
     key = bits[0]
-    value = bits[1].join(":")
+    value = bits[1..-1].join(":")
     value.strip!
     key.strip!
     key.downcase!

@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require 'json'
+
+bits = ARGF.read.split(" ")
+
+puts {
+    "1": bits[0].to_f,
+    "5": bits[1].to_f,
+    "15": bits[2].to_f
+}.to_json

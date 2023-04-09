@@ -1,3 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-jc --mount <&0
+require 'json'
+
+data = ARGF.read
+
+out = []
+data.split("\n").each do |line|
+    bits = line.split(" ")
+    out << {device: bits[0], mountpoint: bits[1], fs: bits[2], options: bits[3..-1].join(" ")}
+end
+
+puts out.to_json
