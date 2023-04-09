@@ -1,11 +1,11 @@
 package hooks
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"sort"
 )
 
+// BuildPreModifiersFrom builds a list of pre-hooks from the given directory
 func BuildPreModifiersFrom(dir string) []Modifier {
 	ls, _ := filepath.Glob(dir + "/*")
 	cmds := []Modifier{}
@@ -13,36 +13,32 @@ func BuildPreModifiersFrom(dir string) []Modifier {
 	sort.Strings(ls)
 
 	for _, fn := range ls {
+		if !isExecutable(fn) {
+			continue
+		}
 		cmds = append(cmds, modiferCommand(fn))
 	}
 
 	return cmds
 }
 
-func ProcessPre(cmds []Modifier, unparsed map[string][]string) error {
-	data, _ := json.Marshal(unparsed)
-
+// ProcessPre processes the data passed in, and applies all of the pre-hooks to it
+func ProcessPre(cmds []Modifier, data []byte) ([]byte, error) {
 	for _, cmd := range cmds {
-		out, err := cmd("", data)
+		_data, err := cmd("", data)
 
 		// command said to discard?
-		if err == ErrDiscardShadow {
-			return ErrDiscardShadow
+		if err == ErrDiscardShadow { // exit status 2 means discard this entire shadow
+			return nil, ErrDiscardShadow
 		}
 
 		// command worked?
-		if err != nil {
+		if err != nil { // any other exit status means discard this particular scripts results
 			continue
 		}
 
-		// is valid JSON?
-		_t := map[string][]string{}
-		if err := json.Unmarshal(out, &_t); err != nil {
-			continue
-		}
-
-		data = out
+		data = _data
 	}
 
-	return nil
+	return data, nil
 }
