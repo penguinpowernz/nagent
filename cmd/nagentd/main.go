@@ -65,13 +65,14 @@ func main() {
 
 		hostname := strings.Split(msg.Subject, ".")[1]
 
-		// parse basic map string, with each section as an array of lines
-		unparsed := checkmk.Parse(msg.Data)
 		// pass whole shadow through the pre-process rules
-		if err := hooks.ProcessPre(preScriptHooks, unparsed); err == hooks.ErrDiscardShadow {
+		preprocessed, err := hooks.ProcessPre(preScriptHooks, msg.Data)
+		if err == hooks.ErrDiscardShadow {
 			return // discard the shadow if necessary
 		}
 
+		// parse basic map string, with each section as an array of lines
+		unparsed := checkmk.Parse(preprocessed)
 		shadow := mkShadow(unparsed, parserScriptHooks)
 
 		// save it to the store, which returns the JSON result of merging with the existing shadow
@@ -81,16 +82,21 @@ func main() {
 			return
 		}
 
-		_data, err := hooks.ProcessPost(postScriptHooks, data)
-		if err != nil {
+		shadow, err = hooks.ProcessPost(postScriptHooks, data)
+		switch err {
+		case nil:
+			if data, err = store.Save(hostname, shadow); err != nil {
+				log.Println("ERROR: failed to save post scripts shadow")
+				return
+			}
+
+		default:
 			log.Println("ERROR: failed to modify shadow in post hooks:", err)
-		} else {
-			data = _data
 		}
 
 		// if saving went OK pass it to all of our sinks
 		if err == nil {
-			hooks.ProcessSinks(sinkScriptHooks, hostname, data)
+			hooks.ProcessSinks(sinkScriptHooks, hostname, data, keys(shadow))
 		}
 	})
 
@@ -114,7 +120,7 @@ func main() {
 	api.Run(":8080")
 }
 
-func mkShadow(unparsed map[string][]string, parserScriptHooks map[string]hooks.Modifier) map[string]interface{} {
+func mkShadow(unparsed map[string][]string, parserScripts map[string]hooks.Modifier) map[string]interface{} {
 	shadow := map[string]interface{}{}
 
 	// run through each section and give it to our filters to parse into JSON
@@ -122,7 +128,7 @@ func mkShadow(unparsed map[string][]string, parserScriptHooks map[string]hooks.M
 		shadow[section] = lines // default is just an array of lines
 
 		// this returns data, modified from the original raw lines
-		data, err := hooks.ProcessParsers(parserScriptHooks, section, []byte(strings.Join(lines, "\n")))
+		data, err := hooks.ProcessParserSection(parserScripts, section, []byte(strings.Join(lines, "\n")))
 		if err != nil {
 			continue
 		}
@@ -149,13 +155,14 @@ func parseAndDumpFile(r io.Reader, err error) {
 		panic(err)
 	}
 
-	// parse basic map string, with each section as an array of lines
-	unparsed := checkmk.Parse(data)
 	// pass whole shadow through the pre-process rules
-	if err := hooks.ProcessPre(preScriptHooks, unparsed); err == hooks.ErrDiscardShadow {
+	preprocessed, err := hooks.ProcessPre(preScriptHooks, data)
+	if err == hooks.ErrDiscardShadow {
 		return // discard the shadow if necessary
 	}
 
+	// parse basic map string, with each section as an array of lines
+	unparsed := checkmk.Parse(preprocessed)
 	shadow := mkShadow(unparsed, parserScriptHooks)
 	data, err = json.MarshalIndent(shadow, "", "  ")
 	if err != nil {
@@ -163,4 +170,11 @@ func parseAndDumpFile(r io.Reader, err error) {
 	}
 
 	os.Stdout.Write(data)
+}
+
+func keys(m map[string]interface{}) (keys []string) {
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return
 }
