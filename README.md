@@ -2,7 +2,8 @@
 
 An agent that delivers system status in checkmk format via NATS.  It's receiving server 
 can modify the incoming data en route, and convert it to JSON using local Debian style scripts.
-It also stores/updates a shadow file for each host.
+It also stores/updates a shadow file for each host.  The goal is to have batteries-included
+shadow storage for check_mk and check_mk type output.
 
 ## Server flow
 
@@ -59,68 +60,160 @@ You can get shadows from the API like: `:8080/shadows/:hostname`
 
 ## Running the docker
 
-The docker will be the easiest to use.  It comes with ruby, python, `jc`, `yq` and `jq` and `gron` preinstalled so you should be able to
-write any parser you need.
+The docker will be the easiest to use.  It comes with ruby, python, `jc`, `yq` and `jq` 
+and `gron` preinstalled so you should be able to write any parser you need.
 
-For the sinks `curl` and `mosquitto-clients` are installed as well as some gems like `influxdb` and `nats`.  You can extend the docker to
-add what packages you would find useful, or do a PR to add them to the Dockerfile in this repository.
+For the sinks `curl` and `mosquitto-clients` are installed as well as some gems like 
+`influxdb` and `nats`.  You can extend the docker to add what packages you would find
+useful, or do a PR to add them to the Dockerfile in this repository.
+
+```Dockerfile
+FROM penguinpower/nagent
+
+RUN apt-get install -y some-other-tool
+RUN gem install some-other-lib
+```
+
+The volume `/var/lib/nagentd` is exposed so that is where you would put all your scripts.
+Using the Docker compose file is recommended, as it includes NATS.
+
+    docker run -it --name nagentd -p "8080:8080" -v "$(pwd)/data:/var/lib/nagentd" penguinpower/nagentd -u nats://172.17.0.1:4222
+
+This assumes you are running NATS on your host.
 
 ## Script Hooks
 
-###  Pre scripts
+The script hooks all work generally the same:
 
-Pre scripts allow you to modify the entire payload before it reaches the parser.  This looks at the entire message not just individual sections.
+- all executable files in the folder will be called, in alphanumerical order
+- data is passed to STDIN
+- modified data is dumped output to STDOUT
 
-1. incoming data is in JSON format via STDIN
-2. all executable files in the folder will be called, in alphanumerical order
-3. returned data must be valid JSON
-4. return code of 0 means all went OK and STDOUT will be used as the entire message
-5. return code of 2 means the entire message should be discarded and further processing stopped
-6. any other return code means the script STDOUT will be ignored and the message unmodified
+They use common exit codes:
 
-### Parser scripts
+- 0: the command was successful, use the output
+- 21: ignore the output, use the unmodified input
+- 22: discard the entire shadow (pre-hook only)
+- *: an error occurred, use the unmodified input
 
-Put your scripts in `/var/lib/nagentd/parsers` to do JSON conversions, they should accept the raw data in STDIN and output JSON on STDOUT.
-The python `jc` tool can give a quick headstart with this but some scripts are included by default.  For instance, to receive the uname
-output sent by the `nagent` in the previous section, you could do the following:
+###  Pre scripts (/var/lib/nagentd/pre)
+
+Pre scripts allow you to modify the entire payload before it reaches the parser.  This looks at the entire message not just individual sections.  Incoming data is the raw unformatted check_mk style text via STDIN, e.g:
+
+```
+<<<df>>>
+tmpfs                 tmpfs     3249480     2508   3246972       1% /run
+/dev/mapper/data-root ext4    482351616 46396120 411379908      11% /
+/dev/sda1             ext4    491133848       28 466112124       1% /mnt/data
+```
+
+Each script should output the same check_mk style text to STDOUT.
+
+### Parser scripts (/var/lib/nagentd/parsers)
+
+Parser scripts receive the raw check_mk style text on STDIN and are expected to process
+that text into a JSON object on STDOUT.  The name of the script should refer to the name
+of the section it aims to parse.
+
+There is a special case for the script called `_`.  This is a catch-all script and will receive every
+section that doesn't have its own script. The name of the section is provided in the envvar `$SECTION`.
+
+The discarding signal (exit code 22) does not work here.  If not parsed, sections will be an array of
+strings representing each line of the check_mk section text.
+
+Example script that uses python jc to parse the output: 
 
     #!/bin/bash
-    # /var/lib/nagentd/parsers/uname
-
     jc --uname <&0
-
     exit 0;
 
-As you can surmise the name of the script refers to the name of the section.  If the return code is non-zero then the output will be ignored
-and the section will be added to the shadow as a simple array of lines.
+Included script to turn the check_mk `cpu` section to a readable load average:
 
-There is a special case for the script called `_`.  A script with this name will receive every section that doesn't have its own script and returning 
-a non-zero code means the STDOUT will be used for that section.  The envvar `SECTION` will be made available to this script.
+```ruby
+#!/usr/bin/env ruby
 
-    #!/bin/bash
+require 'json'
 
-    case $SECTION in
-    "lsblk") jc --lsblk ;;
-    "df")    jc --df ;;
-    *)       exit 1 ;;
-    esac
+bits = ARGF.read.split(" ")
 
+puts {
+    "1": bits[0].to_f,
+    "5": bits[1].to_f,
+    "15": bits[2].to_f
+}.to_json
+```
 
-### Sinks
+This is how the included catch-all `_` script works, but can be changed to suit whatever need:
 
-In this folder can go scripts that will receive the fully parsed shadow in JSON format  It can be used to transmit the shadow to other sources
-via webhooks etc. Here are the rules:
+```bash
+#!/bin/bash
 
-1. incoming data is in JSON format via STDIN
-2. all executable files in the folder will be called, in alphanumerical order
-3. STDOUT is ignored
-4. return codes are ignored
-5. the `HOSTNAME` envvar is made available to all scripts:
+case $SECTION in
+"lsblk")      jc --lsblk <&0 ;;
+"df")         jc --df <&0 ;;
+
+# if you pass up YAML in any of your sections you can do this
+"myyml1", "myyml2") jc --yaml <&0 ;;
+
+# if you pass up JSON in any of your sections you can do this
+"myjsn1", "myjsn2") echo <&0 ;;
+
+# for simple key=value formatted sections you can use the included parser
+"keyval1", "keyval2") ./equalsfields ;;
+
+# for simple key:value formatted sections you can use the included parser
+"clnkey1", "clnkey2") ./colonfields ;;
+
+*)       exit 1 ;;
+esac
+```
+
+You can also use symlinks to make multiple sections use the same script if you don't like
+to use the catch-all script:
+
+```bash
+ln -s equalsfields keyval2
+ln -s yaml2json myyml2
+```
+
+Included generic parsers:
+
+- `colonfields`
+- `equalsfields`
+- `xml2json`
+- `yaml2json`
+
+### Post (/var/lib/nagentd/post)
+
+These scripts are for modifying the shadow after the sections have all been parsed and 
+it has been written to disk.  It receives the the JSON formatted shadow on STDIN and
+should dump the modified shadow as JSON on STDOUT.
+
+The discarding signal (exit code 22) does not work here.
+
+### Sinks (/var/lib/nagentd/sinks)
+
+In this folder can go scripts that will receive the fully processed shadow in JSON format
+on STDIN. They can be used to transmit the shadow to other sources via webhooks, NATS, MQTT, etc.
+
+Return codes and stdout are ignored (apart from logging) and the `HOSTNAME` envvar is made
+available for convenience.
 
 Example webhook:
 
-    #!/bin/bash
-    curl https://example.com/webhook/xxxxxxx -d@- -H 'Content-Type: application/json' <&0
+```bash
+#!/bin/bash
+curl https://example.com/webhook/xxxxxxx -d@- -H 'Content-Type: application/json' <&0
+```
+
+Included NATS script:
+
+```ruby
+#!/usr/bin/env ruby
+require 'nats'
+nats = NATS.connect('nats') # inside the docker-compose the NATS server hostname is 'nats'
+nats.publish('shadows.'+ENV['HOSTNAME']+'.updated', ARGF.read)
+```
 
 # TODO
 
