@@ -70,3 +70,7 @@ release:
 	cp dpkg/client/pkg/nagent_${VERSION}_amd64.deb release
 	cp dpkg/server/pkg/nagentd_${VERSION}_aarch64.deb release
 	cp dpkg/client/pkg/nagent_${VERSION}_aarch64.deb release
+
+clean:
+	rm release bin -fr
+	find -name *.deb -exec rm -f {} \;

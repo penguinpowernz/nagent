@@ -56,7 +56,38 @@ Simply run it:
 
 The `-u` flag or the envvar `NATS_URL` will specify the NATS server to connect to.
 
-You can get shadows from the API like: `:8080/shadows/:hostname`
+You can get known hosts from the API like:
+
+```
+curl http://localhost:8080/hosts
+
+["komatsu"]
+```
+
+You can get shadows from the API like:
+
+```
+http://localhost:8080/shadows/komatsu
+
+{
+  "check_mk": {
+    "agentos": "linux",
+    "hostname": "komatsu",
+  },
+  "loadavg": {
+    "1": 0.67,
+    "15": 0.86,
+    "5": 0.71
+  },
+  "mounts": [
+    {
+      "device": "/dev/mapper/data-root",
+      "fs": "ext4",
+      "mountpoint": "/",
+      "options": "rw,noatime,errors=remount-ro 0 0"
+    },
+....snip....
+```
 
 ## Running the docker
 
