@@ -89,6 +89,16 @@ http://localhost:8080/shadows/komatsu
 ....snip....
 ```
 
+You can provide a timestamp and if it is newer than the shadow then you will
+get a 304 Not Modified response instead of a payload.
+
+```
+http://localhost:8080/shadows/komatsu?cursor=1693477126
+
+Status: Not Modified
+Status-Code: 304
+```
+
 ## Running the docker
 
 The docker will be the easiest to use.  It comes with ruby, python, `jc`, `yq` and `jq` 
