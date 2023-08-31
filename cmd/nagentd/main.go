@@ -6,7 +6,6 @@ import (
 	"flag"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -57,66 +56,11 @@ func main() {
 	}
 
 	store := &DiskStore{path: "./shadows"}
+	svr := &Server{store, nc}
 
-	nc.Subscribe("nagent.*.data", func(msg *nats.Msg) {
-		if msg.Reply != "" {
-			nc.Publish(msg.Reply, []byte("true"))
-		}
-
-		hostname := strings.Split(msg.Subject, ".")[1]
-
-		// pass whole shadow through the pre-process rules
-		preprocessed, err := hooks.ProcessPre(preScriptHooks, msg.Data)
-		if err == hooks.ErrDiscardShadow {
-			return // discard the shadow if necessary
-		}
-
-		// parse basic map string, with each section as an array of lines
-		unparsed := checkmk.Parse(preprocessed)
-		shadow := mkShadow(unparsed, parserScriptHooks)
-
-		// save it to the store, which returns the JSON result of merging with the existing shadow
-		data, err := store.Save(hostname, shadow)
-		if err != nil {
-			log.Println("ERROR: failed to save shadow")
-			return
-		}
-
-		shadow, err = hooks.ProcessPost(postScriptHooks, data)
-		switch err {
-		case nil:
-			if data, err = store.Save(hostname, shadow); err != nil {
-				log.Println("ERROR: failed to save post scripts shadow")
-				return
-			}
-
-		default:
-			log.Println("ERROR: failed to modify shadow in post hooks:", err)
-		}
-
-		// if saving went OK pass it to all of our sinks
-		if err == nil {
-			hooks.ProcessSinks(sinkScriptHooks, hostname, data, keys(shadow))
-		}
-	})
-
+	nc.Subscribe("nagent.*.data", svr.receiveEvent)
 	api := gin.Default()
-	api.GET("/hosts", func(c *gin.Context) {
-		c.JSON(200, store.Hosts())
-	})
-
-	api.GET("/shadow/:name", func(c *gin.Context) {
-		name := c.Param("name")
-		data, err := store.Read(name)
-
-		if err != nil {
-			c.AbortWithStatus(404)
-			return
-		}
-
-		c.Data(200, "application/json", data)
-	})
-
+	svr.SetupRoutes(api)
 	api.Run(":8080")
 }
 
